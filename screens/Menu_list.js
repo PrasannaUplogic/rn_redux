@@ -1,0 +1,253 @@
+import React, { useState, useEffect } from 'react';
+import { Platform, StyleSheet, SafeAreaView, LogBox, Image, FlatList, Text, View, StatusBar, TouchableOpacity } from 'react-native';
+import { Row, Col, Container, Content } from 'native-base';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { openDatabase } from 'react-native-sqlite-storage';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { useDispatch, useSelector } from 'react-redux';
+import { get_addQuotes, get_addMenu, deleteQuote, add_menu } from "./stores/actions";
+
+LogBox.ignoreAllLogs(true)
+
+export default function Menu_list(props) {
+    var db = openDatabase({ name: 'ProductDatabase.db' });
+
+    const navigation = useNavigation();
+    // const navigation = props.navigation
+
+    const dispatch = useDispatch();
+    const dataReducer = useSelector((state) => state.dataReducers);
+    console.log("IN STORE dataReducer -->", dataReducer)
+    const { menus } = dataReducer;
+    console.log("menus", menus)
+
+    const [menu_list, setMenu_list] = useState([]);
+    const [cart_count, setCart_count] = useState(menus.length);
+
+    const Add_cart_icon = require('../assets/img/add_cart.png')
+    const Added_to_cart = require('../assets/img/selected.png')
+
+
+
+
+
+    useEffect(() => {
+        get_menulist()
+    }, []);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            get_menulist()
+            return () => {
+
+            };
+        }, [])
+    );
+
+
+
+
+    async function get_menulist() {
+
+
+        db.transaction((tx) => {
+            tx.executeSql(
+                'SELECT * FROM cart',
+                [],
+                (tx, results) => {
+                    var temp = [];
+                    for (let i = 0; i < results.rows.length; ++i) {
+                        console.log("results.rows.item(i)", results.rows.item(i))
+                        temp.push(results.rows.item(i));
+                    }
+                    setMenu_list(temp);
+
+                    if (results.rows.length >= 1) {
+                        setEmpty(false);
+                    } else {
+                        setEmpty(true)
+                    }
+
+                }
+            );
+
+        });
+         AsyncStorage.getItem('menus', (err, menus) => {
+            console.log("Get menus from async", menus)
+            if (err) {
+                alert(err.message);
+            }
+            else if (menus !== "null" && menus !== null) {
+                dispatch(get_addMenu(JSON.parse(menus)));
+            }
+        });
+
+    };
+
+    async function add_cart(item) {
+
+
+        var details_obj = {
+            "itemAmount": item.menu_amount,
+            "itemId": item.menu_id,
+            "itemName": item.menu_name,
+            "itemQty": item.menu_qty,
+            "itemStock": item.menu_stock,
+            "itemSelcted": 1
+        }
+
+        // console.log("details_obj", details_obj)
+
+        var menu_arr = []
+        AsyncStorage.getItem('menus', (err, menus) => {
+            console.log("async menu", menus)
+            if (err) alert(err.message)
+
+            else if (menus !== "null" && menus !== null) {
+                menus = JSON.parse(menus)
+                console.log("available menus", menus)
+                console.log("details_obj------", details_obj)
+                menus.unshift(details_obj)
+
+                AsyncStorage.setItem('menus', JSON.stringify(menus), () => {
+                    dispatch(add_menu(details_obj));
+                });
+            } else {
+                menu_arr.push(details_obj)
+                console.log("menu_arr", menu_arr)
+                AsyncStorage.setItem('menus', JSON.stringify(menu_arr), () => {
+                    dispatch(add_menu(details_obj));
+                });
+            }
+        })
+
+
+
+    }
+
+
+    return (
+        <SafeAreaView style={{ flex: 1 }}>
+            <Container style={styles.MainContainer}>
+                <Row style={{ height: 80, width: "100%" }}>
+                    <Col style={styles.header_side}>
+                        <Ionicons onPress={() => { navigation.openDrawer() }} name="menu" size={30} />
+                    </Col>
+                    <Col style={styles.header_center}>
+                        <Text>Menu List page</Text>
+                    </Col>
+                    <Col style={styles.header_side}>
+                        <View style={styles.blade_view}>
+                            <Text style={styles.blade_txt}>{cart_count}</Text>
+                        </View>
+                        <Ionicons name="cart-outline" size={30} />
+                    </Col>
+                </Row>
+
+                <Content>
+                    {
+                        menu_list.length > 0 ?
+                            <FlatList
+                                data={menu_list}
+                                renderItem={({ item }) =>
+                                    <View style={styles.list_outerview}>
+                                        <View style={styles.list_leftview}>
+                                            <Text >{item.menu_name}</Text>
+                                            <Text >${item.menu_amount}</Text>
+                                            <Text >Availabe qty: {item.menu_qty}</Text>
+
+                                        </View>
+                                        <View style={styles.list_right_view}>
+                                            {/* <Image source={Added_to_cart} style={styles.img_icon} /> */}
+
+                                            <TouchableOpacity onPress={() => { add_cart(item) }}>
+                                                <Image source={Add_cart_icon} style={styles.img_icon} />
+                                            </TouchableOpacity>
+                                        </View>
+
+
+                                    </View>
+                                }
+                            // keyExtractor={item => item.id}
+
+                            />
+                            :
+                            <Text>No data</Text>
+                    }
+
+                </Content>
+            </Container>
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    MainContainer:
+    {
+        // flex: 1,
+        // alignItems: 'center',
+        paddingLeft: 20, paddingRight: 20,
+        // justifyContent: 'center',
+
+    },
+    bottomview: {
+        width: '100%',
+        height: 50,
+        paddingLeft: 30,
+        paddingRight: 30,
+        position: 'absolute',
+
+        bottom: 0,
+    },
+    logoimg: {
+        width: 300,
+        height: 300,
+        // marginBottom: 30,
+        resizeMode: "contain"
+        // borderWidth:2,
+        // borderColor:'red'
+    },
+
+    img_icon: {
+        height: 40, width: 80, resizeMode: "contain"
+    },
+
+    header_side: {
+        width: "15%", justifyContent: "center"
+    },
+
+    header_center: {
+        width: "70%", justifyContent: "center"
+    },
+
+    list_outerview: {
+        marginTop: 10, flexDirection: "row", borderBottomWidth: 0.3, borderBottomColor: "#a3a3a3"
+    },
+
+    list_leftview: {
+        width: "50%", marginBottom: 5
+    },
+
+    list_right_view: {
+        width: "50%", justifyContent: "center", alignItems: "flex-end",
+    },
+    blade_view: {
+        position: 'absolute',
+        backgroundColor: 'red',
+        width: 18,
+        height: 18,
+        borderRadius: 18 / 2,
+        right: 10,
+        top: +15,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    blade_txt: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: "#FFFFFF",
+        fontSize: 10,
+    }
+});
