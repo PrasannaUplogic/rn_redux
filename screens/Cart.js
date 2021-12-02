@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Platform, StyleSheet, SafeAreaView, LogBox, Image, FlatList, Text, View, StatusBar, TouchableOpacity } from 'react-native';
+import { Platform, StyleSheet, SafeAreaView, LogBox, Pressable, Image, FlatList, Text, View, StatusBar, TouchableOpacity } from 'react-native';
 import { Row, Col, Container, Content } from 'native-base';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { openDatabase } from 'react-native-sqlite-storage';
@@ -7,7 +7,8 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import UIStepper from 'react-native-ui-stepper';
 import { useDispatch, useSelector } from 'react-redux';
-import { get_addQuotes, get_addMenu, deleteQuote, add_menu } from "./stores/actions";
+import { update_menu, get_addMenu, del_menu, add_menu } from "./stores/actions";
+
 
 LogBox.ignoreAllLogs(true)
 
@@ -21,6 +22,7 @@ export default function Cart(props) {
     const dataReducer = useSelector((state) => state.dataReducers);
     console.log("IN STORE dataReducer -->", dataReducer)
     const { menus } = dataReducer;
+    var items_arr = menus
     console.log("menus", menus)
 
 
@@ -85,9 +87,54 @@ export default function Cart(props) {
 
     };
 
+    async function on_inc_dec(data, index, itemId) {
+
+        if (data != 0) {
+            items_arr[index].itemSelcted = data
+            console.log("items_arr", data, items_arr)
+
+            dispatch(update_menu(items_arr[index]));
+
+            AsyncStorage.getItem('menus', (err, menus) => {
+                console.log("async menu", menus)
+                if (err) alert(err.message)
+                else {
+                    AsyncStorage.setItem('menus', JSON.stringify(items_arr), () => {
+                        console.log("async updated")
+                    });
+                }
+            })
+        } else {
+            dispatch(del_menu(itemId));
+
+            AsyncStorage.getItem('menus', (err, menus) => {
+                console.log("async menu", menus)
+                if (err) alert(err.message)
+                else {
+                    menus = JSON.parse(menus)
+                    menus.map((val, key) => {
+                        if (val.itemId == itemId) {
+                            menus.splice(key, 1)
+                        }
+                    })
+                    AsyncStorage.setItem('menus', JSON.stringify(menus), () => {
+                        console.log("async updated")
+                    });
+                }
+            })
+        }
+
+    }
+
+    const on_change = () => {
+
+    }
 
 
-
+    const on_max_reached = (index) => {
+        var product_name = '"' + items_arr[index].itemName + '"'
+        alert("Maximum Qty of " + product_name + " is " + items_arr[index].itemQty)
+    }
 
     return (
         <SafeAreaView style={{ flex: 1 }}>
@@ -109,31 +156,58 @@ export default function Cart(props) {
                         menus.length > 0 ?
                             <FlatList
                                 data={menus}
-                                renderItem={({ item }) =>
+                                renderItem={({ item, index }) =>
                                     <View style={styles.list_outerview}>
                                         <View style={styles.list_leftview}>
-                                            <Text >{item.itemName}</Text>
-                                            <Text >${item.itemAmount}</Text>
-                                            
+                                            <Text >Product Name: {item.itemName}</Text>
+                                            <Text >Product price: ${item.itemAmount}</Text>
+                                            <Text >Product avail: {item.itemQty}</Text>
+
 
                                         </View>
                                         <View style={styles.list_right_view}>
 
-                                            <TouchableOpacity onPress={() => { add_cart(item) }}>
-                                                <Image source={Add_cart_icon} style={styles.img_icon} />
-                                            </TouchableOpacity>
-                                            {/* <Image source={Added_to_cart} style={styles.img_icon} /> */}
+                                            <UIStepper displayValue
+                                                height={40}
+                                                width={100}
+                                                value={item.itemSelcted}
+                                                initialValue={item.itemSelcted}
+                                                minimumValue={0}
+                                                maximumValue={item.itemQty}
+                                                fontSize={14}
+                                                borderColor={"#999"}
+                                                textColor={"#000"}
+                                                overrideTintColor
+                                                tintColor={"#a3a3a3"}
+                                                borderRadius={3}
+                                                // fontFamily={colors.font_family}
+                                                onValueChange={(text) => { on_change(item) }}
+                                                onIncrement={(text) => { on_inc_dec(text, index, item.itemId) }}
+                                                onDecrement={(text) => { on_inc_dec(text, index, item.itemId) }}
+                                                onMaximumReached={(text) => { on_max_reached(index) }}
+                                            />
 
                                         </View>
 
 
                                     </View>
                                 }
-                            // keyExtractor={item => item.id}
 
                             />
                             :
                             <Text>No data</Text>
+                    }
+
+                    {
+                        menus.length > 0 &&
+                        <View style={{ width: "100%", marginTop:20 }}>
+                            <TouchableOpacity style={styles.checkout_btn}
+                                onPress={() => { navigation.navigate("Checkout") }}
+                            >
+                                <Text>checkout</Text>
+                            </TouchableOpacity>
+
+                        </View>
                     }
 
                 </Content>
@@ -191,5 +265,8 @@ const styles = StyleSheet.create({
 
     list_right_view: {
         width: "50%", justifyContent: "center", alignItems: "flex-end",
+    },
+    checkout_btn: {
+        alignItems: "center", justifyContent: "center", height: 40, width: 100, borderRadius: 10, backgroundColor: "#a3a3a3"
     }
 });

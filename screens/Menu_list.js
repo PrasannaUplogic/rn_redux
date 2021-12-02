@@ -7,7 +7,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { get_addQuotes, get_addMenu, deleteQuote, add_menu } from "./stores/actions";
+import { get_addQuotes, get_addMenu, del_menu, add_menu } from "./stores/actions";
 
 LogBox.ignoreAllLogs(true)
 
@@ -24,10 +24,10 @@ export default function Menu_list(props) {
     console.log("menus", menus)
 
     const [menu_list, setMenu_list] = useState([]);
-    const [cart_count, setCart_count] = useState(menus.length);
 
     const Add_cart_icon = require('../assets/img/add_cart.png')
     const Added_to_cart = require('../assets/img/selected.png')
+    const edit_menu = require('../assets/img/edit.png')
 
 
 
@@ -74,7 +74,7 @@ export default function Menu_list(props) {
             );
 
         });
-         AsyncStorage.getItem('menus', (err, menus) => {
+        await AsyncStorage.getItem('menus', (err, menus) => {
             console.log("Get menus from async", menus)
             if (err) {
                 alert(err.message);
@@ -122,8 +122,27 @@ export default function Menu_list(props) {
                 });
             }
         })
+    }
 
+    async function remove_item(itemId) {
+        console.log("remove_item")
+        dispatch(del_menu(itemId));
 
+        AsyncStorage.getItem('menus', (err, menus) => {
+            console.log("async menu", menus)
+            if (err) alert(err.message)
+            else {
+                menus = JSON.parse(menus)
+                menus.map((val, key) => {
+                    if (val.itemId == itemId) {
+                        menus.splice(key, 1)
+                    }
+                })
+                AsyncStorage.setItem('menus', JSON.stringify(menus), () => {
+                    console.log("async updated")
+                });
+            }
+        })
 
     }
 
@@ -139,10 +158,13 @@ export default function Menu_list(props) {
                         <Text>Menu List page</Text>
                     </Col>
                     <Col style={styles.header_side}>
-                        <View style={styles.blade_view}>
-                            <Text style={styles.blade_txt}>{cart_count}</Text>
-                        </View>
-                        <Ionicons name="cart-outline" size={30} />
+                        <TouchableOpacity style={{ flexDirection: "column" }} onPress={() => { navigation.navigate("Cart") }}>
+                            <View style={styles.blade_view}>
+                                <Text style={styles.blade_txt}>{menus.length}</Text>
+                            </View>
+                            <Ionicons name="cart-outline" size={30} />
+                        </TouchableOpacity>
+
                     </Col>
                 </Row>
 
@@ -151,24 +173,44 @@ export default function Menu_list(props) {
                         menu_list.length > 0 ?
                             <FlatList
                                 data={menu_list}
-                                renderItem={({ item }) =>
-                                    <View style={styles.list_outerview}>
-                                        <View style={styles.list_leftview}>
-                                            <Text >{item.menu_name}</Text>
-                                            <Text >${item.menu_amount}</Text>
-                                            <Text >Availabe qty: {item.menu_qty}</Text>
+                                renderItem={({ item }) => {
+
+                                    const checkUsername = obj => obj.itemId === item.menu_id;
+
+                                    console.log("menus.some(checkUsername)", menus.some(checkUsername))
+                                    return (
+                                        <View style={styles.list_outerview}>
+                                            <View style={styles.list_leftview}>
+                                                <Text >{item.menu_name}</Text>
+                                                <Text >${item.menu_amount}</Text>
+                                                <Text >Availabe qty: {item.menu_qty}</Text>
+
+                                            </View>
+                                            <View style={styles.list_right_view}>
+                                                <TouchableOpacity onPress={() => { navigation.navigate("Menu_edit", { item }) }}>
+                                                    <Image source={edit_menu} style={styles.img_icon_checked} />
+                                                </TouchableOpacity>
+
+                                                {
+                                                    menus.some(checkUsername) == true ?
+                                                        <TouchableOpacity onPress={() => { remove_item(item.menu_id) }}>
+                                                            <Image source={Added_to_cart} style={styles.img_icon_checked} />
+                                                        </TouchableOpacity>
+                                                        :
+                                                        <TouchableOpacity onPress={() => { add_cart(item) }}>
+                                                            <Image source={Add_cart_icon} style={styles.img_icon} />
+                                                        </TouchableOpacity>
+                                                }
+
+                                            </View>
+
 
                                         </View>
-                                        <View style={styles.list_right_view}>
-                                            {/* <Image source={Added_to_cart} style={styles.img_icon} /> */}
-
-                                            <TouchableOpacity onPress={() => { add_cart(item) }}>
-                                                <Image source={Add_cart_icon} style={styles.img_icon} />
-                                            </TouchableOpacity>
-                                        </View>
+                                    )
+                                }
 
 
-                                    </View>
+
                                 }
                             // keyExtractor={item => item.id}
 
@@ -213,6 +255,9 @@ const styles = StyleSheet.create({
     img_icon: {
         height: 40, width: 80, resizeMode: "contain"
     },
+    img_icon_checked: {
+        height: 30, width: 80, resizeMode: "contain"
+    },
 
     header_side: {
         width: "15%", justifyContent: "center"
@@ -231,7 +276,7 @@ const styles = StyleSheet.create({
     },
 
     list_right_view: {
-        width: "50%", justifyContent: "center", alignItems: "flex-end",
+        width: "50%", justifyContent: "center", alignItems: "flex-end", flexDirection: "row"
     },
     blade_view: {
         position: 'absolute',
@@ -240,7 +285,7 @@ const styles = StyleSheet.create({
         height: 18,
         borderRadius: 18 / 2,
         right: 10,
-        top: +15,
+        top: -6,
         alignItems: 'center',
         justifyContent: 'center',
     },
