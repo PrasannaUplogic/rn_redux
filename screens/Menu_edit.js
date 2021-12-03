@@ -19,19 +19,29 @@ export default function Menu_create(props) {
     const [menu_amount, setMenu_amount] = useState(0);
 
     useEffect(() => {
-        setMenu_id(menu_detail.menu_id)
-        setMenu_name(menu_detail.menu_name)
-        setMenu_qty(menu_detail.menu_qty)
-        setMenu_amount(menu_detail.menu_amount)
+
+        setData()
+
     }, []);
+
+    useEffect(() => {
+        setData()
+    }, [menu_detail]);
 
     useFocusEffect(
         React.useCallback(() => {
             return () => {
-
+                setData()
             };
         }, [])
     );
+
+    async function setData() {
+        setMenu_id(menu_detail.menu_id); console.log("menu_id --> ", menu_id)
+        setMenu_name(menu_detail.menu_name); console.log("menu_name --> ", menu_name)
+        setMenu_qty(menu_detail.menu_qty); console.log("menu_qty --> ", menu_qty)
+        setMenu_amount(menu_detail.menu_amount); console.log("menu_amount --> ", menu_amount)
+    }
 
     async function updateMenudata() {
         if (menu_name == '' || menu_qty == 0 || menu_amount == 0) {
@@ -77,21 +87,20 @@ export default function Menu_create(props) {
                     <View style={{ width: "100%", }}>
 
                         <Text style={{ padding: 10 }}>Menu ID: {menu_id}</Text>
+                        <Text style={{ padding: 10 }}>menu_name: {menu_name}</Text>
+                        <Text style={{ padding: 10 }}>menu_qty: {menu_qty}</Text>
+                        <Text style={{ padding: 10 }}>menu_amount: {menu_amount}</Text>
+
                         <TextInput
-
                             placeholder={"Menu name"}
-
                             onChangeText={text => setMenu_name(text)}
                             value={menu_name}
                             style={{ padding: 10 }}
                         />
                     </View>
 
-
-
                     <View style={{ width: "100%", }}>
                         <TextInput
-
                             placeholder={"Menu Quantity"}
                             onChangeText={text => setMenu_qty(text)}
                             value={menu_qty}
@@ -100,15 +109,12 @@ export default function Menu_create(props) {
                     </View>
                     <View style={{ width: "100%", }}>
                         <TextInput
-
                             placeholder={"Menu Amount"}
                             onChangeText={text => setMenu_amount(text)}
                             value={menu_amount}
                             style={{ padding: 10 }}
                         />
                     </View>
-
-
                     <View style={{ width: "100%", }}>
                         <TouchableOpacity style={{ alignItems: "center", justifyContent: "center", height: 40, width: 100, borderRadius: 10, backgroundColor: "#a3a3a3" }}
                             onPress={() => { updateMenudata() }}

@@ -28,6 +28,7 @@ export default function Menu_list(props) {
     const Add_cart_icon = require('../assets/img/add_cart.png')
     const Added_to_cart = require('../assets/img/selected.png')
     const edit_menu = require('../assets/img/edit.png')
+    const delete_menu = require('../assets/img/delete.png')
 
 
 
@@ -124,8 +125,30 @@ export default function Menu_list(props) {
         })
     }
 
-    async function remove_item(itemId) {
-        console.log("remove_item")
+    async function removeFrmCart(itemId) {
+        console.log("removeFrmCart")
+        dispatch(del_menu(itemId));
+
+        AsyncStorage.getItem('menus', (err, menus) => {
+            console.log("async menu", menus)
+            if (err) alert(err.message)
+            else {
+                menus = JSON.parse(menus)
+                menus.map((val, key) => {
+                    if (val.itemId == itemId) {
+                        menus.splice(key, 1)
+                    }
+                })
+                AsyncStorage.setItem('menus', JSON.stringify(menus), () => {
+                    console.log("async updated")
+                });
+            }
+        })
+
+    }
+
+    async function delete_itemFromDB(itemId) {
+        console.log("delete_itemFromDB")
         dispatch(del_menu(itemId));
 
         AsyncStorage.getItem('menus', (err, menus) => {
@@ -190,10 +213,13 @@ export default function Menu_list(props) {
                                                 <TouchableOpacity onPress={() => { navigation.navigate("Menu_edit", { item }) }}>
                                                     <Image source={edit_menu} style={styles.img_icon_checked} />
                                                 </TouchableOpacity>
+                                                <TouchableOpacity onPress={() => { delete_itemFromDB(item.menu_id)}}>
+                                                    <Image source={delete_menu} style={styles.img_icon_checked} />
+                                                </TouchableOpacity>
 
                                                 {
                                                     menus.some(checkUsername) == true ?
-                                                        <TouchableOpacity onPress={() => { remove_item(item.menu_id) }}>
+                                                        <TouchableOpacity onPress={() => { removeFrmCart(item.menu_id) }}>
                                                             <Image source={Added_to_cart} style={styles.img_icon_checked} />
                                                         </TouchableOpacity>
                                                         :
@@ -253,10 +279,10 @@ const styles = StyleSheet.create({
     },
 
     img_icon: {
-        height: 40, width: 80, resizeMode: "contain"
+        height:30, width:30, resizeMode: "contain", marginHorizontal:10
     },
     img_icon_checked: {
-        height: 30, width: 80, resizeMode: "contain"
+        height: 30, width: 30, resizeMode: "contain", marginHorizontal:10
     },
 
     header_side: {
@@ -276,7 +302,7 @@ const styles = StyleSheet.create({
     },
 
     list_right_view: {
-        width: "50%", justifyContent: "center", alignItems: "flex-end", flexDirection: "row"
+        width: "50%", justifyContent: "flex-end", alignItems: "center", flexDirection: "row"
     },
     blade_view: {
         position: 'absolute',
